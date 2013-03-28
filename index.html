@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>sync poc</title>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+<script>
+	// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+// http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
+ 
+// requestAnimationFrame polyfill by Erik Möller
+// fixes from Paul Irish and Tino Zijdel
+ 
+(function() {
+    var lastTime = 0;
+    var vendors = ['ms', 'moz', 'webkit', 'o'];
+    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+        window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+        window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] 
+                                   || window[vendors[x]+'CancelRequestAnimationFrame'];
+    }
+ 
+    if (!window.requestAnimationFrame)
+        window.requestAnimationFrame = function(callback, element) {
+            var currTime = new Date().getTime();
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+            var id = window.setTimeout(function() { callback(currTime + timeToCall); }, 
+              timeToCall);
+            lastTime = currTime + timeToCall;
+            return id;
+        };
+ 
+    if (!window.cancelAnimationFrame)
+        window.cancelAnimationFrame = function(id) {
+            clearTimeout(id);
+        };
+}());
+</script>
+<style>
+	body {
+		font-family: Helvetica, sans serif;
+		font-size: 3em;
+	}
+</style>
+</head>
+<body>
+
+	<div id="clock"></a>
+
+	<script>
+		var localClockOffset = 0;Math.random()*10000;
+		var $clock = $('#clock');
+
+		var clockDelta = 0;
+		var samples = [];
+
+		var now = function () {
+			return (+new Date) + localClockOffset;
+		};
+
+		var sampleLatency = function (callback) {
+			$.post('/sync', {clientLocalTime: now()}, function (data) {
+				var receiveTime = now();
+				data = JSON.parse(data);
+				data.clientLocalTime = parseInt(data.clientLocalTime)
+				data.receiveTime = receiveTime;
+				data.latency = (data.receiveTime - data.clientLocalTime) * 0.5;
+				data.clockDelta = data.receiveTime - data.serverLocalTime - data.latency;
+				data.fakeClockOffset = localClockOffset;
+				callback(data);
+			}, 'text');
+		}
+
+		var updateClock = function () {
+			window.requestAnimationFrame(updateClock);
+			$clock.text( (now() - clockDelta)*0.001 );
+		}
+		window.requestAnimationFrame(updateClock);
+
+
+		var pushSample = function (sample) {
+			var i, len = samples.length;
+
+			for(i = 0; i < len; i++) {
+				if (sample.latency < samples[i].latency) {
+					samples.splice(i, 0, sample);
+					return;
+				}
+			}
+			samples.push(sample);
+		};
+
+		var calcMedian = function (values) {
+			var half = Math.floor(values.length/2);
+			if(values.length % 2) {
+				//console.log('odd')
+				return values[half];
+			} else {
+				//console.log('even', ((values[half-1] + values[half]) / 2.0) )
+				return (values[half-1] + values[half]) / 2.0;
+			}
+		};
+
+		var filterSamples = function (samples) {
+			var list = [],
+					i,
+					latency,
+					len = samples.length,
+					sd = getStandardDeviation(samples),
+					median = calcMedian(samples);
+
+			console.log('stdv', sd);
+			for (i=0; i < len; i++) {
+				latency = samples[i].latency;
+				console.log(latency, median.latency, sd)
+				if (latency > median.latency - sd && latency < median.latency + sd) {
+					list.push(samples[i]);
+				}
+			}
+
+			return list;
+		}
+
+
+		var getAverageClockDelta = function (samples) {
+			var i = samples.length,
+			    sum = 0;
+			while( i-- ){
+				sum += samples[i].clockDelta;
+			}
+			return sum / samples.length;
+		}
+
+		var syncCounter = 0;
+		var sync = function () {
+			sampleLatency(function (sample) {
+				//clockDelta = sample.clockDelta;
+				pushSample(sample);
+
+				console.log('got sample', sample, samples);
+
+				if (++syncCounter < 5)
+					setTimeout(sync, 0);
+				else 
+					syncAvg();
+			});
+		};
+		sync();
+
+		var syncAvg = function () {
+			var list = filterSamples(samples);
+			console.log('filtered list', list)
+
+			var avgClockDelta = getAverageClockDelta(list);
+
+			clockDelta = avgClockDelta;
+			console.log('avgClockDelta', avgClockDelta);
+		};
+
+
+/*
+
+// 1. Client stamps current local time on a "time request" packet and sends to server
+
+send( {clientLocalTime: now()} )
+
+// 2. Upon receipt by server, server stamps server-time and returns
+//msg.serverLocalTime: now()
+
+/* 3. Upon receipt by client,
+ - client subtracts current time from sent time and divides by two to compute latency.
+//msg.latency = (msg.clientLocalTime - now()) * 0.5
+
+//- It subtracts current time from server time to determine client-server time delta and adds in the half-latency to get the correct clock delta. (So far this algothim is very similar to SNTP)
+//msg.clockDelta = msg.serverLocalTime - now() + latency
+
+
+// 4. The first result should immediately be used to update the clock since it will get the local clock into at least the right ballpark (at least the right timezone!)
+//contextTime = now() + clockDelta;
+
+// 5. The client repeats steps 1 through 3 five or more times, pausing a few seconds each time. Other traffic may be allowed in the interim, but should be minimized for best results
+
+//for i < 5; i++
+//  run step 1-3 with 1s? delay
+//  samples.push(msg)
+
+// 6. The results of the packet receipts are accumulated and sorted in lowest-latency to highest-latency order. The median latency is determined by picking the mid-point sample from this ordered list.
+
+//var median = getMedianLatency(samples);
+
+// 7. All samples above approximately 1 standard-deviation from the median are discarded and the remaining samples are averaged using an arithmetic mean.
+*/
+// http://bateru.com/news/2011/03/javascript-standard-deviation-variance-average-functions/
+var isArray = function (obj) {
+	return Object.prototype.toString.call(obj) === "[object Array]";
+},
+getNumWithSetDec = function( num, numOfDec ){
+	var pow10s = Math.pow( 10, numOfDec || 0 );
+	return ( numOfDec ) ? Math.round( pow10s * num ) / pow10s : num;
+},
+getAverageFromNumArr = function( numArr, numOfDec ){
+	if( !isArray( numArr ) ){ return false;	}
+	var i = numArr.length,
+		sum = 0;
+	while( i-- ){
+		sum += numArr[ i ].latency;
+	}
+	return getNumWithSetDec( (sum / numArr.length ), numOfDec );
+},
+getVariance = function( numArr, numOfDec ){
+	if( !isArray(numArr) ){ return false; }
+	var avg = getAverageFromNumArr( numArr, numOfDec ),
+		i = numArr.length,
+		v = 0;
+
+	while( i-- ){
+		v += Math.pow( (numArr[ i ].latency - avg), 2 );
+	}
+	v /= numArr.length;
+	return getNumWithSetDec( v, numOfDec );
+},
+getStandardDeviation = function( numArr, numOfDec ){
+	if( !isArray(numArr) ){ return false; }
+	var stdDev = Math.sqrt( getVariance( numArr, numOfDec ) );
+	return getNumWithSetDec( stdDev, numOfDec );
+};
+
+
+	</script>
+
+</body>
+</html>
