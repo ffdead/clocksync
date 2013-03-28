@@ -58,6 +58,9 @@
 		var now = function () {
 			return (+new Date) + localClockOffset;
 		};
+		var nowsync = function () {
+			return now() - clockDelta;
+		};	
 
 		var sampleLatency = function (callback) {
 			$.post('/sync', {clientLocalTime: now()}, function (data) {
@@ -74,7 +77,9 @@
 
 		var updateClock = function () {
 			window.requestAnimationFrame(updateClock);
-			$clock.text( (now() - clockDelta)*0.001 );
+			var time = nowsync();
+			scheduleSound(time);
+			$clock.text( time * 0.001 );
 		}
 		window.requestAnimationFrame(updateClock);
 
@@ -166,7 +171,21 @@
 			context.noteOn(time);
 		};
 
+		var lastPlay = -1;
+		var scheduleSound = function (serverTime) {
+			nowMs = serverTime * .001;
+			ctxTime = context.currentTime;
+			nextSecond = Math.ceil(nowMs);
 
+			if (nextSecond > lastPlay) {
+				lastPlay = nextSecond
+				msToNextS = nextSecond - nowMs;
+				//console.log('sound', msToNextS);
+				var time = ctxTime + msToNextS;
+				playSyncSound(context, time);
+			}
+
+		};
 /*
 
 // 1. Client stamps current local time on a "time request" packet and sends to server
