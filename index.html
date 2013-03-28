@@ -205,13 +205,9 @@
 				console.log('no soundz maan')
 				return;
 			}
-			
 			var source1 = context.createBufferSource();
-		 
 		  	source1.buffer = bufferList[1];
-	
 		  	source1.connect(context.destination);
-		 
 		  	source1.start(time);
 		  	//console.log('kick');
 
