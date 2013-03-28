@@ -79,15 +79,11 @@
 		  bufferLoader.load();
 		};
 
-		initsounds();
-
 		function finishedLoading(b) {
 		  // Create two sources and play them both together.
-console.log('got buffer')
 		  bufferList = b;
-		  
-		
 		}
+		initsounds();
 
 		var now = function () {
 			return (+new Date) + localClockOffset;
@@ -112,7 +108,8 @@ console.log('got buffer')
 		var updateClock = function () {
 			window.requestAnimationFrame(updateClock);
 			var time = nowsync();
-			scheduleSound(time);
+			if (context)
+				scheduleSound(time);
 			$clock.text( time * 0.001 );
 		}
 		window.requestAnimationFrame(updateClock);
@@ -198,29 +195,27 @@ console.log('got buffer')
 		};
 
 
-		var playSyncSound = function (context, time) {
+		var playSyncSound = function (time) {
 
 			if (!bufferList){
 				console.log('no soundz maan')
 				return;
 			}
+
+
 			
 			var source1 = context.createBufferSource();
 		 
+ 				
 		  	source1.buffer = bufferList[0];
-	
+		
 		  	source1.connect(context.destination);
-		 
-		  	source1.start(time);
-		  	//console.log('kick');
-
-			
+		  	source1.noteOn(time);
 		};
 
 
-		$('body').click(function () {
-			console.log('click')
-			playSyncSound(context, 0);
+		$('body').on('touchstart', function () {
+			playSyncSound();
 		});
 
 
@@ -238,8 +233,6 @@ console.log('got buffer')
 		var oscOff = function(){
 			oscillator.disconnect();
 		}
-
-
 
 		var playSimpleSound = function(buffer){
 			var source = context.createBufferSource();
@@ -265,11 +258,12 @@ console.log('got buffer')
 				msToNextS = nextSecond - nowMs;
 				//console.log('sound', msToNextS);
 				var time = ctxTime + msToNextS;
-				playSyncSound(context, time);
+				playSyncSound(time);
 			}
 
 
 		};
+
 /*
 
 // 1. Client stamps current local time on a "time request" packet and sends to server
