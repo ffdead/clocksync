@@ -71,7 +71,8 @@
 		  bufferLoader = new BufferLoader(
 		    context,
 		    [
-		      'sounds/Kick.mp3'
+		      'sounds/Kick.mp3',
+		      'sounds/beep.mp3'
 		    ],
 		    finishedLoading
 		    );
@@ -83,7 +84,7 @@
 
 		function finishedLoading(b) {
 		  // Create two sources and play them both together.
-console.log('got buffer')
+			console.log('got buffer')
 		  bufferList = b;
 		  
 		
@@ -207,7 +208,7 @@ console.log('got buffer')
 			
 			var source1 = context.createBufferSource();
 		 
-		  	source1.buffer = bufferList[0];
+		  	source1.buffer = bufferList[1];
 	
 		  	source1.connect(context.destination);
 		 
@@ -248,8 +249,6 @@ console.log('got buffer')
 			    source.noteOn(0);
 
 		}
-
-
 
 
 
