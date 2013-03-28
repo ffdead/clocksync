@@ -40,9 +40,11 @@
 }());
 </script>
 <style>
-	body {
+	html, body {
 		font-family: Helvetica, sans serif;
 		font-size: 3em;
+		height: 100%;
+		background: #eee;
 	}
 </style>
 </head>
@@ -214,6 +216,12 @@ console.log('got buffer')
 
 			
 		};
+
+
+		$('body').click(function () {
+			console.log('click')
+			playSyncSound(context, 0);
+		});
 
 
 		var oscOn = function(time){  
