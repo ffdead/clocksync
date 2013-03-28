@@ -61,7 +61,7 @@
 		var bufferLoader;
 		var bufferList;
 
-		window.onload = initsounds();
+		
 
 		function initsounds() {
 		  
@@ -77,10 +77,12 @@
 		  bufferLoader.load();
 		};
 
-		function finishedLoading(bufferList) {
-		  // Create two sources and play them both together.
+		initsounds();
 
-		  bufferlist = bufferList;
+		function finishedLoading(b) {
+		  // Create two sources and play them both together.
+console.log('got buffer')
+		  bufferList = b;
 		  
 		
 		}
@@ -195,6 +197,11 @@
 
 
 		var playSyncSound = function (context, time) {
+
+			if (!bufferList){
+				console.log('no soundz maan')
+				return;
+			}
 			
 			var source1 = context.createBufferSource();
 		 
@@ -203,7 +210,7 @@
 		  	source1.connect(context.destination);
 		 
 		  	source1.start(time);
-		  	console.log('kick');
+		  	//console.log('kick');
 
 			
 		};
