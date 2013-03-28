@@ -4,6 +4,7 @@
 <meta charset=utf-8 />
 <title>sync poc</title>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+<script src="libs/buffer-loader.js"></script>
 <script>
 	// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
 // http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
@@ -34,6 +35,8 @@
         window.cancelAnimationFrame = function(id) {
             clearTimeout(id);
         };
+
+
 }());
 </script>
 <style>
@@ -54,6 +57,33 @@
 		var context = new webkitAudioContext();
 		var clockDelta = 0;
 		var samples = [];
+		var oscillator;
+		var bufferLoader;
+		var bufferList;
+
+		window.onload = initsounds();
+
+		function initsounds() {
+		  
+
+		  bufferLoader = new BufferLoader(
+		    context,
+		    [
+		      'sounds/Kick.mp3'
+		    ],
+		    finishedLoading
+		    );
+
+		  bufferLoader.load();
+		};
+
+		function finishedLoading(bufferList) {
+		  // Create two sources and play them both together.
+
+		  bufferlist = bufferList;
+		  
+		
+		}
 
 		var now = function () {
 			return (+new Date) + localClockOffset;
@@ -161,10 +191,46 @@
 
 		var playSyncSound = function (context, time) {
 			
-			// setup stuff
+			var source1 = context.createBufferSource();
+		 
+		  	source1.buffer = bufferList[0];
+	
+		  	source1.connect(context.destination);
+		 
+		  	source1.start(0);
+		  	console.log('kick');
 
 			context.noteOn(time);
 		};
+
+		var oscOn = function(time){  
+			oscillator = context.createOscillator(); 
+			oscillator.type = 1;  
+			oscillator.frequency.value = 600; 
+			gainNode = context.createGainNode();  
+			oscillator.connect(gainNode);  
+			gainNode.connect(context.destination);  
+			gainNode.gain.value = 1;  
+			oscillator.start(0); 
+		}
+
+		var oscOff = function(){
+			oscillator.disconnect();
+		}
+
+
+
+		var playSimpleSound = function(buffer){
+			var source = context.createBufferSource();
+			    source.buffer = buffer;
+			    source.connect(context.destination);
+			    source.noteOn(0);
+
+		}
+
+
+
+
 
 
 /*

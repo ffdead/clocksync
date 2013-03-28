@@ -26,5 +26,5 @@ app.post('/sync', function(req, res) {
 		res.end(JSON.stringify(m));
 });
 
-app.listen(1337);
+app.listen(8080);
 console.log('Server running');
