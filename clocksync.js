@@ -65,10 +65,11 @@
 	}
 	
 	var updateSync = function (sample) {
+		console.log(sample);
 		clockDelta = sample.clockDelta;
 		pushSample(sample);
-		if (samples.length < 5) {
-			return setTimeout(root.clocksync.syncMethod, 0);
+		if (samples.length < 9) {
+			return setTimeout(root.clocksync.syncMethod, 100);
 		}
 		completeSync();
 	};

@@ -57,6 +57,23 @@
 
 
 		var lastPlay = -1;
+
+		// scheduling based on server time more stable on mobile (context time stops when app looses focus?)
+		var scheduleSound = function (serverTime) {
+			nowMs = serverTime * .001;
+			ctxTime = context.currentTime;
+			nextSecond = Math.ceil(nowMs);
+
+			if (nextSecond > lastPlay) {
+				lastPlay = nextSecond
+				msToNextS = nextSecond - nowMs;
+				var time = ctxTime + msToNextS;
+				beep(time);
+			}
+		};
+
+		// schedule based on audiocontext time
+		/*
 		var scheduleSound = function (serverTime) {
 			currentTime = context.currentTime;
 			if (lastPlay === -1) {
@@ -75,18 +92,20 @@
 				beep(nextTime);
 			}
 		};
+		*/
 
 		var runLoop = function () {
 			window.requestAnimationFrame(runLoop);
 			var time = clocksync.time();
 			scheduleSound(time);
-			$clock.text(time);
+			$clock.text(time);	
 		}
 
 
 
 		$('body').on('touchstart', function () {
 			beep();
+			//lastPlay = -1;
 		});
 
 		initsounds();
