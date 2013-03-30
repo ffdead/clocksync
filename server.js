@@ -8,7 +8,7 @@ app.configure(function () {
 });
 
 
-/* simulate network delays using normal distribution */
+/* simulate network delays using normal distribution
 function rnd_snd() {
 	return (Math.random()*2-1)+(Math.random()*2-1)+(Math.random()*2-1);
 }
@@ -18,12 +18,13 @@ function rnd(mean, stdev) {
 function fakeNetworkDelay() {
 	return Math.max(200, rnd(1000, 400));
 }
+*/
 
 app.post('/sync', function(req, res) {
 	var m = req.body;
 	m.serverLocalTime = +new Date();
 	res.writeHead(200, {'Content-Type': 'application/json'});
-		res.end(JSON.stringify(m));
+	res.end(JSON.stringify(m));
 });
 
 app.listen(8080);
