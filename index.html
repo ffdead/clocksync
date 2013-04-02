@@ -104,7 +104,7 @@
 
 
 		$('body').on('touchstart', function () {
-			beep();
+			context.createBufferSource().noteOn(0);
 			//lastPlay = -1;
 		});
 
